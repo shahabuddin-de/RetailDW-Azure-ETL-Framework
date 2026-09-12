@@ -1,0 +1,15 @@
+{
+	"name": "ADF-SQLProject",
+	"properties": {
+		"trustModeClaimForMi": {
+			"value": "Disabled",
+			"editable": true
+		}
+	},
+	"location": "eastasia",
+	"identity": {
+		"type": "SystemAssigned",
+		"principalId": "d039be85-1c70-4c7d-ba8e-dc94e0b519b6",
+		"tenantId": "8c5e58f9-6805-4179-9a58-aeed491ed30e"
+	}
+}

@@ -1,0 +1,357 @@
+{
+	"name": "PL_Schema_Validation",
+	"properties": {
+		"activities": [
+			{
+				"name": "Lookup_MetadatTables",
+				"type": "Lookup",
+				"dependsOn": [],
+				"policy": {
+					"timeout": "0.12:00:00",
+					"retry": 0,
+					"retryIntervalInSeconds": 30,
+					"secureOutput": false,
+					"secureInput": false
+				},
+				"userProperties": [],
+				"typeProperties": {
+					"source": {
+						"type": "AzureSqlSource",
+						"sqlReaderQuery": "SELECT SchemaName, TableName, TargetFolder \nFROM dbo.ETL_Metadata \nWHERE IsActive = 1",
+						"queryTimeout": "02:00:00",
+						"partitionOption": "None"
+					},
+					"dataset": {
+						"referenceName": "DS_AzureSQL_Control",
+						"type": "DatasetReference"
+					},
+					"firstRowOnly": false
+				}
+			},
+			{
+				"name": "ForEach_Tables",
+				"type": "ForEach",
+				"dependsOn": [
+					{
+						"activity": "Lookup_MetadatTables",
+						"dependencyConditions": [
+							"Succeeded"
+						]
+					}
+				],
+				"userProperties": [],
+				"typeProperties": {
+					"items": {
+						"value": "@activity('Lookup_MetadatTables').output.value",
+						"type": "Expression"
+					},
+					"isSequential": true,
+					"activities": [
+						{
+							"name": "Lookup_SourceColumns",
+							"type": "Lookup",
+							"dependsOn": [],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"source": {
+									"type": "SqlServerSource",
+									"sqlReaderQuery": {
+										"value": "SELECT COLUMN_NAME, DATA_TYPE \nFROM INFORMATION_SCHEMA.COLUMNS \nWHERE TABLE_SCHEMA = '@{item().SchemaName}' \nAND TABLE_NAME = '@{item().TableName}'",
+										"type": "Expression"
+									},
+									"queryTimeout": "02:00:00",
+									"partitionOption": "None"
+								},
+								"dataset": {
+									"referenceName": "DS_SQLServer_SchemaCheck",
+									"type": "DatasetReference"
+								},
+								"firstRowOnly": false
+							}
+						},
+						{
+							"name": "GM_ListFiles",
+							"type": "GetMetadata",
+							"dependsOn": [
+								{
+									"activity": "Lookup_SourceColumns",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "DS_ADLS_FolderList",
+									"type": "DatasetReference",
+									"parameters": {
+										"TableName": {
+											"value": "@item().TargetFolder",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"childItems"
+								],
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "ParquetReadSettings"
+								}
+							}
+						},
+						{
+							"name": "SetVar_LatestFile",
+							"type": "SetVariable",
+							"dependsOn": [
+								{
+									"activity": "GM_ListFiles",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"variableName": "LatestFileName",
+								"value": {
+									"value": "@last(activity('GM_ListFiles').output.childItems).name",
+									"type": "Expression"
+								}
+							}
+						},
+						{
+							"name": "GM_ParquetSchema",
+							"type": "GetMetadata",
+							"dependsOn": [
+								{
+									"activity": "SetVar_LatestFile",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"policy": {
+								"timeout": "0.12:00:00",
+								"retry": 0,
+								"retryIntervalInSeconds": 30,
+								"secureOutput": false,
+								"secureInput": false
+							},
+							"userProperties": [],
+							"typeProperties": {
+								"dataset": {
+									"referenceName": "DS_ADLS_LatestFile",
+									"type": "DatasetReference",
+									"parameters": {
+										"TableName": {
+											"value": "@item().TargetFolder",
+											"type": "Expression"
+										},
+										"FileName": {
+											"value": "@variables('LatestFileName')",
+											"type": "Expression"
+										}
+									}
+								},
+								"fieldList": [
+									"structure"
+								],
+								"storeSettings": {
+									"type": "AzureBlobFSReadSettings",
+									"recursive": true,
+									"enablePartitionDiscovery": false
+								},
+								"formatSettings": {
+									"type": "ParquetReadSettings"
+								}
+							}
+						},
+						{
+							"name": "IF_SchemaMismatch",
+							"type": "IfCondition",
+							"dependsOn": [
+								{
+									"activity": "GM_ParquetSchema",
+									"dependencyConditions": [
+										"Succeeded"
+									]
+								}
+							],
+							"userProperties": [],
+							"typeProperties": {
+								"expression": {
+									"value": "@not(equals(\n  length(activity('Lookup_SourceColumns').output.value),\n  length(activity('GM_ParquetSchema').output.structure)\n))",
+									"type": "Expression"
+								},
+								"ifFalseActivities": [
+									{
+										"name": "SP_LogSchemaValidation_F",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "dbo.usp_LogSchemaValidation",
+											"storedProcedureParameters": {
+												"PipelineRunID": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"SchemaName": {
+													"value": {
+														"value": "@item().SchemaName",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"TableName": {
+													"value": {
+														"value": "@item().TABLENAME",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"SourceColumnCount": {
+													"value": {
+														"value": "@length(activity('Lookup_SourceColumns').output.value)",
+														"type": "Expression"
+													},
+													"type": "Int32"
+												},
+												"TargetColumnCount": {
+													"value": {
+														"value": "@length(activity('GM_ParquetSchema').output.structure)",
+														"type": "Expression"
+													},
+													"type": "Int32"
+												},
+												"IsMatch": {
+													"value": {
+														"value": "true",
+														"type": "Expression"
+													},
+													"type": "Boolean"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "LS_AzureSQL_ControlDB",
+											"type": "LinkedServiceReference"
+										}
+									}
+								],
+								"ifTrueActivities": [
+									{
+										"name": "SP_LogSchemaValidation",
+										"type": "SqlServerStoredProcedure",
+										"dependsOn": [],
+										"policy": {
+											"timeout": "0.12:00:00",
+											"retry": 0,
+											"retryIntervalInSeconds": 30,
+											"secureOutput": false,
+											"secureInput": false
+										},
+										"userProperties": [],
+										"typeProperties": {
+											"storedProcedureName": "dbo.usp_LogSchemaValidation",
+											"storedProcedureParameters": {
+												"PipelineRunID": {
+													"value": {
+														"value": "@pipeline().RunId",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"SchemaName": {
+													"value": {
+														"value": "@item().SchemaName",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"TableName": {
+													"value": {
+														"value": "@item().TABLENAME",
+														"type": "Expression"
+													},
+													"type": "String"
+												},
+												"SourceColumnCount": {
+													"value": {
+														"value": "@length(activity('Lookup_SourceColumns').output.value)",
+														"type": "Expression"
+													},
+													"type": "Int32"
+												},
+												"TargetColumnCount": {
+													"value": {
+														"value": "@length(activity('GM_ParquetSchema').output.structure)",
+														"type": "Expression"
+													},
+													"type": "Int32"
+												},
+												"IsMatch": {
+													"value": {
+														"value": "false",
+														"type": "Expression"
+													},
+													"type": "Boolean"
+												}
+											}
+										},
+										"linkedServiceName": {
+											"referenceName": "LS_AzureSQL_ControlDB",
+											"type": "LinkedServiceReference"
+										}
+									}
+								]
+							}
+						}
+					]
+				}
+			}
+		],
+		"variables": {
+			"LatestFileName": {
+				"type": "String"
+			}
+		},
+		"annotations": [],
+		"lastPublishTime": "2026-09-10T12:53:50Z"
+	},
+	"type": "Microsoft.DataFactory/factories/pipelines"
+}

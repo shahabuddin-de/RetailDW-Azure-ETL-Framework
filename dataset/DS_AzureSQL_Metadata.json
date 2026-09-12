@@ -1,0 +1,27 @@
+{
+	"name": "DS_AzureSQL_Metadata",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_AzureSQL_ControlDB",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"TableName": {
+				"type": "string"
+			},
+			"SchemaName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "AzureSqlTable",
+		"schema": [],
+		"typeProperties": {
+			"table": {
+				"value": "@concat(dataset().SchemaName,'.',dataset().TableName)",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

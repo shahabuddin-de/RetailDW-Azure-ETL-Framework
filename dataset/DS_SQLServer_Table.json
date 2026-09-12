@@ -1,0 +1,70 @@
+{
+	"name": "DS_SQLServer_Table",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SQLServer_Retail_DW",
+			"type": "LinkedServiceReference"
+		},
+		"parameters": {
+			"SchemaName": {
+				"type": "string"
+			},
+			"TableName": {
+				"type": "string"
+			}
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": [
+			{
+				"name": "SaleID",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "OrderID",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "ProductID",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "StoreID",
+				"type": "bigint",
+				"precision": 19
+			},
+			{
+				"name": "SaleAmount",
+				"type": "decimal",
+				"precision": 10,
+				"scale": 2
+			},
+			{
+				"name": "SaleDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			},
+			{
+				"name": "LastModifiedDate",
+				"type": "datetime",
+				"precision": 23,
+				"scale": 3
+			}
+		],
+		"typeProperties": {
+			"schema": {
+				"value": "@dataset().SchemaName",
+				"type": "Expression"
+			},
+			"table": {
+				"value": "@dataset().TableName",
+				"type": "Expression"
+			}
+		}
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

@@ -1,0 +1,21 @@
+{
+	"name": "LS_SQLServer_Retail_DW",
+	"type": "Microsoft.DataFactory/factories/linkedservices",
+	"properties": {
+		"annotations": [],
+		"type": "SqlServer",
+		"typeProperties": {
+			"server": "localhost",
+			"database": "RetailDW",
+			"encrypt": "mandatory",
+			"trustServerCertificate": true,
+			"authenticationType": "Windows",
+			"userName": "shahabuddinmd0208@gmail.com",
+			"encryptedCredential": "eyJDcmVkZW50aWFsSWQiOiI3ZTQ1NDhlMi04ZTQ4LTQ3NDctYTI5Zi00MTVlZGQ3NzM1NDgiLCJWZXJzaW9uIjoiMi4wIiwiQ2xhc3NUeXBlIjoiTWljcm9zb2Z0LkRhdGFQcm94eS5Db3JlLkludGVyU2VydmljZURhdGFDb250cmFjdC5DcmVkZW50aWFsU1UwNkNZMTQifQ=="
+		},
+		"connectVia": {
+			"referenceName": "SHIR-RetailDW",
+			"type": "IntegrationRuntimeReference"
+		}
+	}
+}

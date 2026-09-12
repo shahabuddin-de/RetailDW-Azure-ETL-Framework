@@ -1,0 +1,13 @@
+{
+	"name": "DS_SQLServer_Discovery",
+	"properties": {
+		"linkedServiceName": {
+			"referenceName": "LS_SQLServer_Retail_DW",
+			"type": "LinkedServiceReference"
+		},
+		"annotations": [],
+		"type": "SqlServerTable",
+		"schema": []
+	},
+	"type": "Microsoft.DataFactory/factories/datasets"
+}

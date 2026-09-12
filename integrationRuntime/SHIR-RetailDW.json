@@ -1,0 +1,7 @@
+{
+	"name": "SHIR-RetailDW",
+	"properties": {
+		"type": "SelfHosted",
+		"description": "SQL Server Runtime"
+	}
+}
