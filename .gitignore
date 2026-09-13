@@ -1,0 +1,23 @@
+Azure Data Factory
+
+adf_publish/
+
+Environment
+
+.env
+*.user
+*.publishsettings
+
+VS Code
+
+.vscode/
+
+Python
+
+pycache/
+*.pyc
+
+OS
+
+.DS_Store
+Thumbs.db
